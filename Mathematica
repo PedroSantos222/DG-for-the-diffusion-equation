@@ -1,0 +1,450 @@
+(*We start by doing a DG method to solve the Poisson equation with \
+certain boundary conditions*)
+
+In[1]:= xi = 0;
+xip = h;
+xim = -h;
+xipp = 2 h;
+yj = 0;
+yjp = h;
+yjm = -h;
+yjpp = 2 h;
+\[Sigma] = 10;
+
+In[10]:= 
+phi1[x_, y_, xa_, xb_, ya_, 
+  yb_] := ((xb - x)*(yb - y))/((xb - xa)*(yb - ya))
+phi2[x_, y_, xa_, xb_, ya_, 
+  yb_] := ((x - xa)*(yb - y))/((xb - xa)*(yb - ya))
+phi3[x_, y_, xa_, xb_, ya_, 
+  yb_] := ((x - xa)*(y - ya))/((xb - xa)*(yb - ya))
+phi4[x_, y_, xa_, xb_, ya_, 
+  yb_] := ((xb - x)*(y - ya))/((xb - xa)*(yb - ya))
+
+In[14]:= 
+Uh[x_, y_] := 
+  U1*phi1[x, y, xi, xip, yj, yjp] + U2*phi2[x, y, xi, xip, yj, yjp] + 
+   U3*phi3[x, y, xi, xip, yj, yjp] + U4*phi4[x, y, xi, xip, yj, yjp];
+UhR[x_, y_] := 
+  UR1*phi1[x, y, xip, xipp, yj, yjp] + 
+   UR2*phi2[x, y, xip, xipp, yj, yjp] + 
+   UR3*phi3[x, y, xip, xipp, yj, yjp] + 
+   UR4*phi4[x, y, xip, xipp, yj, yjp];
+UhL[x_, y_] := 
+  UL1*phi1[x, y, xim, xi, yj, yjp] + 
+   UL2*phi2[x, y, xim, xi, yj, yjp] + 
+   UL3*phi3[x, y, xim, xi, yj, yjp] + UL4*phi4[x, y, xim, xi, yj, yjp];
+UhT[x_, y_] := 
+  UT1*phi1[x, y, xi, xip, yjp, yjpp] + 
+   UT2*phi2[x, y, xi, xip, yjp, yjpp] + 
+   UT3*phi3[x, y, xi, xip, yjp, yjpp] + 
+   UT4*phi4[x, y, xi, xip, yjp, yjpp];
+UhB[x_, y_] := 
+  UB1*phi1[x, y, xi, xip, yjm, yj] + 
+   UB2*phi2[x, y, xi, xip, yjm, yj] + 
+   UB3*phi3[x, y, xi, xip, yjm, yj] + UB4*phi4[x, y, xi, xip, yjm, yj];
+
+In[19]:= 
+fluxR[y_] := ((D[Uh[x, y], x] + D[UhR[x, y], x])/
+      2 - (\[Sigma]/h)*(Uh[x, y] - UhR[x, y])) /. x -> xip;
+
+In[20]:= 
+fluxL[y_] := ((D[Uh[x, y], x] + D[UhL[x, y], x])/
+      2 - (\[Sigma]/h)*(UhL[x, y] - Uh[x, y])) /. x -> xi;
+
+In[21]:= 
+fluxT[x_] := ((D[Uh[x, y], y] + D[UhT[x, y], y])/
+      2 - (\[Sigma]/h)*(Uh[x, y] - UhT[x, y])) /. y -> yjp;
+
+In[22]:= 
+fluxB[x_] := ((D[Uh[x, y], y] + D[UhB[x, y], y])/
+      2 - (\[Sigma]/h)*(UhB[x, y] - Uh[x, y])) /. y -> yj;
+
+In[23]:= 
+equation[v_] := 
+  Integrate[
+    D[Uh[x, y], x]*D[v[x, y], x] + D[Uh[x, y], y]*D[v[x, y], y], {x, 
+     xi, xip}, {y, yj, yjp}] - 
+   Integrate[fluxR[y]*v[xip, y], {y, yj, yjp}] + 
+   Integrate[fluxL[y]*v[xi, y], {y, yj, yjp}] - 
+   Integrate[fluxT[x]*v[x, yjp], {x, xi, xip}] + 
+   Integrate[fluxB[x]*v[x, yj], {x, xi, xip}];
+
+In[24]:= 
+equation[
+  Function[{x, y}, phi1[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[24]= 1/12 (84 U1 + 19 U2 - 2 U3 + 19 U4 - 2 UB1 - UB2 - 19 UB3 - 
+   38 UB4 - 2 UL1 - 19 (2 UL2 + UL3) - UL4)
+
+In[25]:= 
+equation[
+  Function[{x, y}, phi2[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[25]= 1/12 (19 U1 + 84 U2 + 19 U3 - 2 U4 - UB1 - 2 UB2 - 38 UB3 - 
+   19 UB4 - 38 UR1 - 2 UR2 - UR3 - 19 UR4)
+
+In[26]:= 
+equation[
+  Function[{x, y}, phi3[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[26]= 1/12 (-2 U1 + 19 U2 + 84 U3 + 19 U4 - 19 UR1 - UR2 - 2 UR3 - 
+   38 UR4 - 19 UT1 - 38 UT2 - 2 UT3 - UT4)
+
+In[27]:= 
+equation[
+  Function[{x, y}, phi4[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[27]= 1/12 (19 U1 - 2 U2 + 19 U3 + 84 U4 - UL1 - 19 UL2 - 38 UL3 - 
+   2 UL4 - 38 UT1 - 19 UT2 - UT3 - 2 UT4)
+
+In[28]:= 
+AK = 1/12 {{84, 19, -2, 19}, {19, 84, 19, -2}, {-2, 19, 84, 
+     19}, {19, -2, 19, 84}};
+
+AL = 1/12 {{-2, -38, -19, -1}, {0, 0, 0, 0}, {0, 0, 0, 
+     0}, {-1, -19, -38, -2}};
+
+AR = 1/12 {{0, 0, 0, 0}, {-38, -2, -1, -19}, {-19, -1, -2, -38}, {0, 
+     0, 0, 0}};
+
+AB = 1/12 {{-2, -1, -19, -38}, {-1, -2, -38, -19}, {0, 0, 0, 0}, {0, 
+     0, 0, 0}};
+
+AT = 1/12 {{0, 0, 0, 0}, {0, 0, 0, 
+     0}, {-19, -38, -2, -1}, {-38, -19, -1, -2}};
+
+In[33]:= Uij = Table[U[i, j, k], {k, 1, 4}];
+
+In[34]:= UL = Table[U[i - 1, j, k], {k, 1, 4}];
+UR = Table[U[i + 1, j, k], {k, 1, 4}];
+UB = Table[U[i, j - 1, k], {k, 1, 4}];
+UT = Table[U[i, j + 1, k], {k, 1, 4}];
+
+In[38]:= Nx = 3;
+Ny = 3;
+
+In[40]:= h = 1/Nx;
+
+In[41]:= 
+boundaryRules = {U[0, j_, k_] :> 1, U[Nx + 1, j_, k_] :> 2, 
+   U[i_, 0, k_] :> 3, U[i_, Ny + 1, k_] :> 3};
+
+In[42]:= 
+DGEquation[i_, j_] := 
+  AK . Table[U[i, j, k], {k, 1, 4}] + 
+   AL . Table[U[i - 1, j, k], {k, 1, 4}] + 
+   AR . Table[U[i + 1, j, k], {k, 1, 4}] + 
+   AB . Table[U[i, j - 1, k], {k, 1, 4}] + 
+   AT . Table[U[i, j + 1, k], {k, 1, 4}];
+
+In[43]:= DGEquation[1, 1]
+
+Out[43]= {-(1/6) U[0, 1, 1] - 19/6 U[0, 1, 2] - 19/12 U[0, 1, 3] - 
+  1/12 U[0, 1, 4] - 1/6 U[1, 0, 1] - 1/12 U[1, 0, 2] - 
+  19/12 U[1, 0, 3] - 19/6 U[1, 0, 4] + 7 U[1, 1, 1] + 
+  19/12 U[1, 1, 2] - 1/6 U[1, 1, 3] + 
+  19/12 U[1, 1, 4], -(1/12) U[1, 0, 1] - 1/6 U[1, 0, 2] - 
+  19/6 U[1, 0, 3] - 19/12 U[1, 0, 4] + 19/12 U[1, 1, 1] + 
+  7 U[1, 1, 2] + 19/12 U[1, 1, 3] - 1/6 U[1, 1, 4] - 
+  19/6 U[2, 1, 1] - 1/6 U[2, 1, 2] - 1/12 U[2, 1, 3] - 
+  19/12 U[2, 1, 4], -(1/6) U[1, 1, 1] + 19/12 U[1, 1, 2] + 
+  7 U[1, 1, 3] + 19/12 U[1, 1, 4] - 19/12 U[1, 2, 1] - 
+  19/6 U[1, 2, 2] - 1/6 U[1, 2, 3] - 1/12 U[1, 2, 4] - 
+  19/12 U[2, 1, 1] - 1/12 U[2, 1, 2] - 1/6 U[2, 1, 3] - 
+  19/6 U[2, 1, 4], -(1/12) U[0, 1, 1] - 19/12 U[0, 1, 2] - 
+  19/6 U[0, 1, 3] - 1/6 U[0, 1, 4] + 19/12 U[1, 1, 1] - 
+  1/6 U[1, 1, 2] + 19/12 U[1, 1, 3] + 7 U[1, 1, 4] - 
+  19/6 U[1, 2, 1] - 19/12 U[1, 2, 2] - 1/12 U[1, 2, 3] - 
+  1/6 U[1, 2, 4]}
+
+In[44]:= 
+unknowns = 
+  Flatten[Table[
+    Table[Table[U[i, j, k], {k, 1, 4}], {j, 1, Nx}], {i, 1, Ny}]];
+
+In[159]:= 
+equations = 
+  Flatten[Table[DGEquation[i, j], {i, 1, Nx}, {j, 1, Ny}]] /. 
+   boundaryRules;
+
+In[160]:= {b, A} = CoefficientArrays[equations, unknowns];
+
+In[161]:= A = Normal[A];
+b = Normal[b];
+
+In[163]:= Dimensions[A]
+
+Out[163]= {36, 36}
+
+In[164]:= solution = LinearSolve[A, -b];
+
+In[165]:= solution // N
+
+Out[165]= {1.99917, 3.18034, 2.11408, 0.835314, 1.00615, 2.08558, \
+2.08558, 1.00615, 0.835314, 2.11408, 3.18034, 1.99917, 3.01732, \
+2.97895, 2.40495, 2.13731, 2.10839, 2.39161, 2.39161, 2.10839, \
+2.13731, 2.40495, 2.97895, 3.01732, 3.07194, 2.50083, 1.91241, \
+2.38592, 2.37217, 1.99758, 1.99758, 2.37217, 2.38592, 1.91241, \
+2.50083, 3.07194}
+
+In[52]:= 
+UhCell[i_, j_, x_, y_] := 
+ Module[{c1, c2, c3, c4, xa, xb, ya, yb}, 
+  c1 = solution[[4 ((i - 1) Ny + (j - 1)) + 1]];
+  c2 = solution[[4 ((i - 1) Ny + (j - 1)) + 2]];
+  c3 = solution[[4 ((i - 1) Ny + (j - 1)) + 3]];
+  c4 = solution[[4 ((i - 1) Ny + (j - 1)) + 4]];
+  xa = (i - 1) h;
+  xb = i h;
+  ya = (j - 1) h;
+  yb = j h;
+  c1 phi1[x, y, xa, xb, ya, yb] + c2 phi2[x, y, xa, xb, ya, yb] + 
+   c3 phi3[x, y, xa, xb, ya, yb] + c4 phi4[x, y, xa, xb, ya, yb]]
+
+In[53]:= UhSolution[x_, y_] := Module[{i, j}, i = Floor[x/h] + 1;
+  j = Floor[y/h] + 1;
+  UhCell[i, j, x, y]]
+
+In[54]:= UhSolution[0.25, 0.37]
+
+Out[54]= 1.81572
+
+(*Now let's do the time dependent case u_t-\delta U = 0*)
+
+In[58]:= A;
+
+In[66]:= 
+Uh[t_, x_, y_] := 
+  U1[t]*phi1[x, y, xi, xip, yj, yjp] + 
+   U2[t]*phi2[x, y, xi, xip, yj, yjp] + 
+   U3[t]*phi3[x, y, xi, xip, yj, yjp] + 
+   U4[t]*phi4[x, y, xi, xip, yj, yjp];
+UhR[t_, x_, y_] := 
+  UR1[t]*phi1[x, y, xip, xipp, yj, yjp] + 
+   UR2[t]*phi2[x, y, xip, xipp, yj, yjp] + 
+   UR3[t]*phi3[x, y, xip, xipp, yj, yjp] + 
+   UR4[t]*phi4[x, y, xip, xipp, yj, yjp];
+UhL[t_, x_, y_] := 
+  UL1[t]*phi1[x, y, xim, xi, yj, yjp] + 
+   UL2[t]*phi2[x, y, xim, xi, yj, yjp] + 
+   UL3[t]*phi3[x, y, xim, xi, yj, yjp] + 
+   UL4[t]*phi4[x, y, xim, xi, yj, yjp];
+UhT[t_, x_, y_] := 
+  UT1[t]*phi1[x, y, xi, xip, yjp, yjpp] + 
+   UT2[t]*phi2[x, y, xi, xip, yjp, yjpp] + 
+   UT3[t]*phi3[x, y, xi, xip, yjp, yjpp] + 
+   UT4[t]*phi4[x, y, xi, xip, yjp, yjpp];
+UhB[t_, x_, y_] := 
+  UB1[t]*phi1[x, y, xi, xip, yjm, yj] + 
+   UB2[t]*phi2[x, y, xi, xip, yjm, yj] + 
+   UB3[t]*phi3[x, y, xi, xip, yjm, yj] + 
+   UB4[t]*phi4[x, y, xi, xip, yjm, yj];
+
+In[75]:= 
+equationM[v_] := 
+ Integrate[D[Uh[t, x, y], t]*v[x, y], {x, xi, xip}, {y, yj, yjp}]
+
+In[76]:= 
+equationM[
+  Function[{x, y}, phi1[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[76]= 1/324 (4 Derivative[1][U1][t] + 2 Derivative[1][U2][t] + 
+   Derivative[1][U3][t] + 2 Derivative[1][U4][t])
+
+In[77]:= 
+equationM[
+  Function[{x, y}, phi2[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[77]= 1/324 (2 (Derivative[1][U1][t] + 2 Derivative[1][U2][t] + 
+      Derivative[1][U3][t]) + Derivative[1][U4][t])
+
+In[78]:= 
+equationM[
+  Function[{x, y}, phi3[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[78]= 1/324 (Derivative[1][U1][t] + 
+   2 (Derivative[1][U2][t] + 2 Derivative[1][U3][t] + 
+      Derivative[1][U4][t]))
+
+In[79]:= 
+equationM[
+  Function[{x, y}, phi4[x, y, xi, xip, yj, yjp]]] // FullSimplify
+
+Out[79]= 1/324 (2 Derivative[1][U1][t] + Derivative[1][U2][t] + 
+   2 Derivative[1][U3][t] + 4 Derivative[1][U4][t])
+
+In[118]:= Mlocal = 
+ 1/324 {{4, 2, 1, 2}, {2, 4, 2, 1}, {1, 2, 4, 2}, {2, 1, 2, 4}}
+
+Out[118]= {{1/81, 1/162, 1/324, 1/162}, {1/162, 1/81, 1/162, 1/
+  324}, {1/324, 1/162, 1/81, 1/162}, {1/162, 1/324, 1/162, 1/81}}
+
+In[121]:= 
+M = Table[
+   If[Quotient[i - 1, 4] == Quotient[j - 1, 4], 
+    Mlocal[[Mod[i - 1, 4] + 1, Mod[j - 1, 4] + 1]], 0], {i, 36}, {j, 
+    36}];
+
+In[122]:= Dimensions[M]
+
+Out[122]= {36, 36}
+
+In[269]:= B := -Inverse[M] . A
+
+(*So the equation now becomes simply U'(t)=BU(t), now we have to find \
+U(0) and then we apply an Euler method*)
+
+(*Let's use the boundary condition u_0(x,y)=sin(pix)sin(piy)*)
+
+In[270]:= u0[x_, y_] := Sin[Pi*x] Sin[Pi*y]
+
+In[271]:= 
+m1[i_, j_] := 
+ Integrate[
+   u0[x, y]*
+    phi1[x, y, (i - 1)*h, (i)*h, (j - 1)*h, (j)*h], {x, (i - 1)*
+     h, (i)*h}, {y, (j - 1)*h, (j)*h}] // Simplify
+
+In[272]:= 
+m2[i_, j_] := 
+ Integrate[
+   u0[x, y]*
+    phi2[x, y, (i - 1)*h, (i)*h, (j - 1)*h, (j)*h], {x, (i - 1)*
+     h, (i)*h}, {y, (j - 1)*h, (j)*h}] // Simplify
+
+In[273]:= 
+m3[i_, j_] := 
+ Integrate[
+   u0[x, y]*
+    phi3[x, y, (i - 1)*h, (i)*h, (j - 1)*h, (j)*h], {x, (i - 1)*
+     h, (i)*h}, {y, (j - 1)*h, (j)*h}] // Simplify
+
+In[274]:= 
+m4[i_, j_] := 
+ Integrate[
+   u0[x, y]*
+    phi4[x, y, (i - 1)*h, (i)*h, (j - 1)*h, (j)*h], {x, (i - 1)*
+     h, (i)*h}, {y, (j - 1)*h, (j)*h}] // Simplify
+
+In[275]:= U0 = 
+ Inverse[M] . (Table[
+     Table[{m1[i, j], m2[i, j], m3[i, j], m4[i, j]}, {j, 1, Ny}], {i, 
+      1, Nx}] // Flatten)
+
+Out[275]= {(36 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  9 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  9 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  36 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  9 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  36 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  36 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  9 (27 - 6 Sqrt[3] \[Pi] + \[Pi]^2))/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 
+     2 \[Pi]))/\[Pi]^3, 9/\[Pi]^2, 9/\[Pi]^2, 9/\[Pi]^2, 9/\[Pi]^2, \
+-((18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  36 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  9 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  9 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  36 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, -((
+   18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, (
+  9 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3 + (
+  18 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, -((
+   18 (-3 Sqrt[3] + \[Pi]))/\[Pi]^3) - (
+  9 (-3 Sqrt[3] + 2 \[Pi]))/\[Pi]^3, (
+  9 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  36 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, (
+  36 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4 + (
+  9 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 + (
+  36 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4, -((
+   18 (3 Sqrt[3] - 2 \[Pi])^2)/\[Pi]^4) - (
+  18 (-3 Sqrt[3] + \[Pi])^2)/\[Pi]^4 - (
+  45 (27 - 9 Sqrt[3] \[Pi] + 2 \[Pi]^2))/\[Pi]^4}
+
+(*Now that we have the initial condition we can use an Euler method \
+to solve the ODE U'(t)=BU(t)*)
+
+In[326]:= Nt = 2000; (*Cause we want stability*)
+
+In[327]:= ht = 1/Nt;
+
+In[328]:= sol = {U0} // Simplify;
+
+In[329]:= For[n = 1, n <= Nt, n++, 
+ sol = Append[sol, Simplify[sol[[n]] + ht*B . (sol[[n]])]]]
+
+In[330]:= 
+UhCell[t_, i_, j_, x_, y_] := 
+ Module[{c1, c2, c3, c4, xa, xb, ya, yb}, 
+  c1 = sol[[t]][[4 ((i - 1) Ny + (j - 1)) + 1]];
+  c2 = sol[[t]][[4 ((i - 1) Ny + (j - 1)) + 2]];
+  c3 = sol[[t]][[4 ((i - 1) Ny + (j - 1)) + 3]];
+  c4 = sol[[t]][[4 ((i - 1) Ny + (j - 1)) + 4]];
+  xa = (i - 1) h;
+  xb = i h;
+  ya = (j - 1) h;
+  yb = j h;
+  c1 phi1[x, y, xa, xb, ya, yb] + c2 phi2[x, y, xa, xb, ya, yb] + 
+   c3 phi3[x, y, xa, xb, ya, yb] + c4 phi4[x, y, xa, xb, ya, yb]]
+
+In[331]:= 
+UhSolution[t_, x_, y_] := Module[{i, j}, i = Floor[x/h] + 1;
+  j = Floor[y/h] + 1;
+  UhCell[t, i, j, x, y]]
+
+In[332]:= UhSolution[6, 0.25, 0.37]
+
+Out[332]= 0.635571
